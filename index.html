@@ -2,1084 +2,178 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport"
-      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>USD / IRR — بازار موازی</title>
-
+<script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="data.js"></script>
 <style>
-:root{
-  --bg:#0b0e11;
-  --panel:#131722;
-  --grid:#1d222b;
-  --grid2:#303642;
-  --text:#d1d4dc;
-  --muted:#858c9a;
-  --blue:#2962ff;
-  --green:#26a69a;
-}
-
+:root{color-scheme:dark;--bg:#0b0f14;--panel:#111820;--line:#26313c;--text:#e7edf3;--muted:#8c9aaa;--blue:#2f8cff;--green:#22c55e}
 *{box-sizing:border-box}
-
-html,body{
-  margin:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:var(--bg);
-  color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-}
-
-body{
-  padding-top:env(safe-area-inset-top);
-}
-
-#top{
-  position:absolute;
-  left:0;
-  right:0;
-  top:0;
-  height:58px;
-  background:var(--panel);
-  border-bottom:1px solid #303540;
-  display:flex;
-  align-items:center;
-  gap:5px;
-  padding:0 8px;
-  z-index:10;
-}
-
-.title{
-  font-weight:700;
-  font-size:17px;
-  color:#fff;
-  white-space:nowrap;
-}
-
-.subtitle{
-  color:var(--muted);
-  font-size:12px;
-  white-space:nowrap;
-}
-
-.spacer{flex:1}
-
-button{
-  border:0;
-  color:#aeb4c1;
-  background:transparent;
-  border-radius:6px;
-  padding:8px 9px;
-  font-size:12px;
-  white-space:nowrap;
-}
-
-button.active,
-button:active{
-  background:#2a2f3a;
-  color:#fff;
-}
-
-#chart{
-  position:absolute;
-  left:0;
-  right:0;
-  top:58px;
-  bottom:88px;
-  touch-action:none;
-}
-
-canvas{
-  display:block;
-  width:100%;
-  height:100%;
-}
-
-#cross{
-  position:absolute;
-  display:none;
-  pointer-events:none;
-  background:#1e222d;
-  border:1px solid #4a5160;
-  border-radius:6px;
-  padding:7px 10px;
-  font-size:12px;
-  color:#fff;
-  z-index:20;
-  white-space:nowrap;
-}
-
-#price{
-  position:absolute;
-  right:0;
-  display:none;
-  pointer-events:none;
-  background:var(--green);
-  color:#fff;
-  padding:7px 10px;
-  font-size:12px;
-  z-index:15;
-}
-
-#navigator{
-  position:absolute;
-  left:8%;
-  right:8%;
-  bottom:38px;
-  height:52px;
-  background:#171a17;
-  border:1px solid #3a3d36;
-  z-index:5;
-  touch-action:none;
-}
-
-#navCanvas{
-  width:100%;
-  height:100%;
-}
-
-.handle{
-  position:absolute;
-  top:2px;
-  bottom:2px;
-  width:12px;
-  background:#f1f1e9;
-  border:1px solid #777870;
-  border-radius:3px;
-  touch-action:none;
-}
-
-#leftHandle{left:0}
-#rightHandle{right:0}
-
-#bottom{
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:0;
-  height:38px;
-  background:var(--panel);
-  border-top:1px solid #303540;
-  color:var(--muted);
-  font-size:11px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:8;
-}
-
-#loading{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:var(--bg);
-  color:#aaa;
-  font-size:15px;
-  z-index:100;
-}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Tahoma,Arial,sans-serif;color:var(--text);overflow:hidden}
+body{touch-action:none}
+.wrap{height:100%;display:flex;flex-direction:column;min-height:0}
+.top{padding:12px 14px 8px;border-bottom:1px solid var(--line);background:rgba(11,15,20,.96);backdrop-filter:blur(10px);z-index:5}
+.title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+h1{font-size:19px;margin:0 0 3px;font-weight:700;direction:ltr}
+.sub{font-size:12px;color:var(--muted)}
+.value{font-size:20px;font-weight:700;direction:ltr;white-space:nowrap}
+.controls{display:flex;gap:7px;overflow-x:auto;padding:9px 0 2px;scrollbar-width:none}
+.controls::-webkit-scrollbar{display:none}
+button{border:1px solid #34414e;background:#151d26;color:#cdd7e1;border-radius:9px;padding:8px 11px;font-size:12px;white-space:nowrap}
+button.active{background:#183b64;border-color:#2f8cff;color:#fff}
+.chartbox{position:relative;flex:1;min-height:0}
+#chart{position:absolute;inset:0}
+.info{position:absolute;left:10px;top:10px;z-index:4;background:rgba(17,24,32,.88);border:1px solid #2b3743;border-radius:8px;padding:6px 9px;font-size:11px;pointer-events:none;direction:rtl}
+.info b{font-weight:700}
+.bottom{padding:7px 10px calc(8px + env(safe-area-inset-bottom));background:#0e141b;border-top:1px solid var(--line)}
+.range{width:100%;accent-color:var(--blue);direction:ltr}
+.range-label{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;direction:ltr}
+.note{font-size:10px;color:#718092;text-align:center;margin-top:3px}
 </style>
 </head>
-
 <body>
-
-<div id="loading">در حال بارگذاری داده‌های دلار...</div>
-
-<div id="top">
-
-  <div class="title">USD / IRR</div>
-  <div class="subtitle">بازار موازی</div>
-
-  <div class="spacer"></div>
-
-  <button data-range="OLD">۱۳۵۸–۱۳۸۰</button>
-  <button data-range="5Y">۵ سال</button>
-  <button data-range="10Y">۱۰ سال</button>
-  <button data-range="ALL" class="active">همه</button>
-
-  <button id="minus">−</button>
-  <button id="plus">＋</button>
-  <button id="reset">⛶</button>
-
-</div>
-
-<div id="chart">
-  <canvas id="canvas"></canvas>
-  <div id="cross"></div>
-  <div id="price"></div>
-</div>
-
-<div id="navigator">
-  <canvas id="navCanvas"></canvas>
-  <div id="leftHandle" class="handle"></div>
-  <div id="rightHandle" class="handle"></div>
-</div>
-
-<div id="bottom">
-  کشیدن = حرکت &nbsp; | &nbsp; دو انگشت = زوم &nbsp; | &nbsp; لمس = نمایش قیمت
+<div class="wrap">
+  <div class="top">
+    <div class="title">
+      <div>
+        <h1>USD / IRR</h1>
+        <div class="sub">بازار موازی · مقیاس لگاریتمی</div>
+      </div>
+      <div class="value" id="latest">—</div>
+    </div>
+    <div class="controls">
+      <button data-range="all" class="active">همه</button>
+      <button data-range="5y">۵ سال</button>
+      <button data-range="10y">۱۰ سال</button>
+      <button data-range="1358-1380">۱۳۵۸–۱۳۸۰</button>
+      <button id="plus">＋</button>
+      <button id="minus">－</button>
+    </div>
+  </div>
+  <div class="chartbox">
+    <div id="chart"></div>
+    <div class="info" id="info">برای دیدن مقدار، روی نمودار بزن</div>
+  </div>
+  <div class="bottom">
+    <input id="slider" class="range" type="range" min="0" max="1000" value="1000">
+    <div class="range-label"><span id="leftLabel">۱۹۷۹</span><span id="rightLabel">۲۰۲۶</span></div>
+    <div class="note">داده‌های تاریخی: ماهانه ۱۹۷۹–۲۰۰۳، سالانه ۲۰۰۴–۲۰۱۰، روزانه ۲۰۱۱–۲۰۲۶</div>
+  </div>
 </div>
 
 <script>
-
-let DATA = [];
-let PTS = [];
-
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-const navCanvas = document.getElementById("navCanvas");
-const navCtx = navCanvas.getContext("2d");
-
-const chart = document.getElementById("chart");
-const cross = document.getElementById("cross");
-const priceBox = document.getElementById("price");
-
-let W=0,H=0,DPR=1;
-
-let start=0;
-let end=0;
-
-let pointers=new Map();
-let dragState=null;
-let pinchState=null;
-
-
-/* ---------------------------------------------------------
-   LOAD DATA FROM EXISTING FILE
---------------------------------------------------------- */
-
-async function loadData(){
-
-  try{
-
-    const response = await fetch("./index_v3_fixed.html",{
-      cache:"no-store"
-    });
-
-    if(!response.ok)
-      throw new Error("cannot load data file");
-
-    const html = await response.text();
-
-    const match =
-      html.match(/const\s+DATA\s*=\s*(\[[\s\S]*?\]);\s*const\s+cv/);
-
-    if(!match)
-      throw new Error("DATA not found");
-
-    DATA = JSON.parse(match[1]);
-
-    PTS = DATA
-      .map((d,i)=>({
-        i,
-        t:new Date(d.t+"T12:00:00").getTime(),
-        v:Number(d.v),
-        src:d.src || ""
-      }))
-      .filter(p =>
-        Number.isFinite(p.t) &&
-        Number.isFinite(p.v) &&
-        p.v>0
-      );
-
-    if(!PTS.length)
-      throw new Error("no data");
-
-    end=PTS.length-1;
-
-    document.getElementById("loading").style.display="none";
-
-    resize();
-    setRange("ALL");
-
-  }catch(e){
-
-    console.error(e);
-
-    document.getElementById("loading").innerHTML =
-      "خطا در بارگذاری داده‌ها<br><small>مطمئن شو فایل index_v3_fixed.html داخل همین Repository باشد.</small>";
-  }
-}
-
-
-/* ---------------------------------------------------------
-   RESIZE
---------------------------------------------------------- */
-
-function resize(){
-
-  DPR=window.devicePixelRatio || 1;
-
-  W=chart.clientWidth;
-  H=chart.clientHeight;
-
-  canvas.width=W*DPR;
-  canvas.height=H*DPR;
-
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-
-  navCanvas.width=navCanvas.clientWidth*DPR;
-  navCanvas.height=navCanvas.clientHeight*DPR;
-
-  navCtx.setTransform(DPR,0,0,DPR,0,0);
-
-  draw();
-  drawNavigator();
-}
-
-
-/* ---------------------------------------------------------
-   RANGE
---------------------------------------------------------- */
-
-function setRange(type){
-
-  if(!PTS.length) return;
-
-  const last=PTS.length-1;
-
-  if(type==="ALL"){
-
-    start=0;
-    end=last;
-
-  }else if(type==="OLD"){
-
-    const from=new Date("1979-01-01").getTime();
-    const to=new Date("2002-12-31").getTime();
-
-    start=PTS.findIndex(p=>p.t>=from);
-
-    if(start<0) start=0;
-
-    let e=PTS.findIndex(p=>p.t>to);
-
-    end=e<0 ? last : e-1;
-
-  }else{
-
-    const years=type==="5Y" ? 5 : 10;
-
-    const t=PTS[last].t-years*365.25*86400000;
-
-    start=PTS.findIndex(p=>p.t>=t);
-
-    if(start<0) start=0;
-
-    end=last;
-  }
-
-  document.querySelectorAll("[data-range]").forEach(b=>{
-    b.classList.toggle("active",b.dataset.range===type);
-  });
-
-  draw();
-  drawNavigator();
-}
-
-
-/* ---------------------------------------------------------
-   VIEW CONTROL
---------------------------------------------------------- */
-
-function clampView(){
-
-  const minSpan=8;
-
-  let span=end-start;
-
-  if(span<minSpan){
-
-    const c=(start+end)/2;
-
-    span=minSpan;
-
-    start=c-span/2;
-    end=c+span/2;
-  }
-
-  if(start<0){
-
-    end-=start;
-    start=0;
-  }
-
-  if(end>PTS.length-1){
-
-    start-=end-(PTS.length-1);
-    end=PTS.length-1;
-  }
-
-  start=Math.max(0,start);
-  end=Math.min(PTS.length-1,end);
-}
-
-
-function zoom(f,center){
-
-  if(!PTS.length) return;
-
-  if(center===undefined)
-    center=(start+end)/2;
-
-  const span=Math.max(
-    8,
-    (end-start)*f
-  );
-
-  start=center-span/2;
-  end=center+span/2;
-
-  clampView();
-
-  draw();
-  drawNavigator();
-}
-
-
-/* ---------------------------------------------------------
-   X / Y
---------------------------------------------------------- */
-
-function xOf(index){
-
-  const left=10;
-  const right=W-62;
-
-  return left+
-    (index-start)/(end-start)*
-    (right-left);
-}
-
-
-function yOf(value,lo,hi){
-
-  const a=Math.log10(lo);
-  const b=Math.log10(hi);
-
-  return 8+
-    (b-Math.log10(value))/(b-a)*
-    (H-35);
-}
-
-
-function fmt(v){
-
-  return new Intl.NumberFormat("en-US",{
-    maximumFractionDigits:0
-  }).format(v);
-}
-
-
-function dateFmt(t){
-
-  return new Intl.DateTimeFormat("en-US",{
-    year:"numeric",
-    month:"short",
-    day:"numeric"
-  }).format(new Date(t));
-}
-
-
-/* ---------------------------------------------------------
-   MAIN DRAW
---------------------------------------------------------- */
-
-function draw(){
-
-  if(!PTS.length) return;
-
-  ctx.clearRect(0,0,W,H);
-
-  const a=Math.max(0,Math.floor(start));
-  const b=Math.min(PTS.length-1,Math.ceil(end));
-
-  const visible=PTS.slice(a,b+1);
-
-  let min=Math.min(...visible.map(p=>p.v));
-  let max=Math.max(...visible.map(p=>p.v));
-
-  let lo=Math.pow(
-    10,
-    Math.floor(Math.log10(min))
-  );
-
-  let hi=Math.pow(
-    10,
-    Math.ceil(Math.log10(max))
-  );
-
-  if(lo===hi){
-    lo/=10;
-    hi*=10;
-  }
-
-
-  /* GRID */
-
-  ctx.font="11px -apple-system";
-  ctx.textBaseline="middle";
-
-  for(
-    let power=Math.floor(Math.log10(lo));
-    power<=Math.ceil(Math.log10(hi));
-    power++
-  ){
-
-    for(let n=1;n<=9;n++){
-
-      const value=n*Math.pow(10,power);
-
-      if(value<lo || value>hi) continue;
-
-      const y=yOf(value,lo,hi);
-
-      ctx.strokeStyle=
-        n===1 ? "#303640" : "#1b2028";
-
-      ctx.lineWidth=
-        n===1 ? 1 : .6;
-
-      ctx.beginPath();
-      ctx.moveTo(0,y);
-      ctx.lineTo(W-48,y);
-      ctx.stroke();
-
-      if(n===1){
-
-        ctx.fillStyle="#858c9a";
-        ctx.textAlign="right";
-
-        ctx.fillText(
-          fmt(value),
-          W-54,
-          y
-        );
-      }
-    }
-  }
-
-
-  /* VERTICAL GRID */
-
-  const span=end-start;
-
-  let step=1;
-
-  if(span>3000) step=365;
-  else if(span>1000) step=180;
-  else if(span>500) step=90;
-  else if(span>250) step=60;
-  else if(span>100) step=30;
-  else if(span>50) step=15;
-  else step=5;
-
-  for(
-    let i=Math.ceil(start/step)*step;
-    i<=end;
-    i+=step
-  ){
-
-    const x=xOf(i);
-
-    ctx.strokeStyle="#1c222b";
-    ctx.lineWidth=1;
-
-    ctx.beginPath();
-    ctx.moveTo(x,0);
-    ctx.lineTo(x,H);
-    ctx.stroke();
-
-    const p=PTS[Math.round(i)];
-
-    if(p){
-
-      ctx.fillStyle="#737b8b";
-      ctx.textAlign="center";
-      ctx.textBaseline="bottom";
-
-      const d=new Date(p.t);
-
-      ctx.fillText(
-        d.getFullYear(),
-        x,
-        H-4
-      );
-    }
-  }
-
-
-  /* PRICE LINE */
-
-  ctx.strokeStyle="#2962ff";
-  ctx.lineWidth=2.3;
-  ctx.lineJoin="round";
-  ctx.lineCap="round";
-
-  ctx.beginPath();
-
-  let first=true;
-
-  for(let i=a;i<=b;i++){
-
-    const p=PTS[i];
-
-    const x=xOf(i);
-    const y=yOf(p.v,lo,hi);
-
-    if(first){
-
-      ctx.moveTo(x,y);
-      first=false;
-
-    }else{
-
-      ctx.lineTo(x,y);
-    }
-  }
-
-  ctx.stroke();
-
-
-  /* CURRENT PRICE */
-
-  const last=PTS[PTS.length-1];
-
-  const ly=yOf(last.v,lo,hi);
-
-  ctx.strokeStyle="#26a69a";
-  ctx.setLineDash([8,7]);
-  ctx.lineWidth=1.5;
-
-  ctx.beginPath();
-  ctx.moveTo(0,ly);
-  ctx.lineTo(W-60,ly);
-  ctx.stroke();
-
-  ctx.setLineDash([]);
-
-  priceBox.style.display="block";
-  priceBox.style.top=Math.max(
-    0,
-    Math.min(H-30,ly-15)
-  )+"px";
-
-  priceBox.textContent=fmt(last.v);
-
-
-  /* STATUS */
-
-  const firstDate=dateFmt(
-    PTS[Math.round(start)].t
-  );
-
-  const lastDate=dateFmt(
-    PTS[Math.round(end)].t
-  );
-
-  document.getElementById("bottom").textContent =
-    firstDate+
-    " — "+
-    lastDate+
-    " · "+
-    visible.length+
-    " points · LOG";
-}
-
-
-/* ---------------------------------------------------------
-   NAVIGATOR
---------------------------------------------------------- */
-
-function drawNavigator(){
-
-  if(!PTS.length) return;
-
-  const nw=navCanvas.clientWidth;
-  const nh=navCanvas.clientHeight;
-
-  navCtx.clearRect(0,0,nw,nh);
-
-  let min=Math.min(...PTS.map(p=>p.v));
-  let max=Math.max(...PTS.map(p=>p.v));
-
-  const lo=Math.log10(min);
-  const hi=Math.log10(max);
-
-  navCtx.strokeStyle="#65708a";
-  navCtx.lineWidth=1;
-
-  navCtx.beginPath();
-
-  PTS.forEach((p,i)=>{
-
-    const x=i/(PTS.length-1)*nw;
-
-    const y=
-      4+
-      (hi-Math.log10(p.v))/(hi-lo)*
-      (nh-8);
-
-    if(i===0)
-      navCtx.moveTo(x,y);
-    else
-      navCtx.lineTo(x,y);
-  });
-
-  navCtx.stroke();
-
-
-  const l=start/(PTS.length-1)*nw;
-  const r=end/(PTS.length-1)*nw;
-
-  navCtx.fillStyle="rgba(80,90,110,.22)";
-  navCtx.fillRect(l,0,r-l,nh);
-
-}
-
-
-/* ---------------------------------------------------------
-   POINTER / TOUCH
---------------------------------------------------------- */
-
-chart.addEventListener("pointerdown",e=>{
-
-  pointers.set(e.pointerId,{
-    x:e.clientX,
-    y:e.clientY
-  });
-
-  chart.setPointerCapture(e.pointerId);
-
-  if(pointers.size===1){
-
-    dragState={
-      x:e.clientX,
-      start,
-      end
-    };
-
-  }else if(pointers.size===2){
-
-    const a=[...pointers.values()];
-
-    const dx=a[0].x-a[1].x;
-    const dy=a[0].y-a[1].y;
-
-    pinch={
-      distance:Math.hypot(dx,dy),
-      start,
-      end
-    };
-
-    dragState=null;
-  }
-});
-
-
-chart.addEventListener("pointermove",e=>{
-
-  if(!pointers.has(e.pointerId)) return;
-
-  pointers.get(e.pointerId).x=e.clientX;
-  pointers.get(e.pointerId).y=e.clientY;
-
-
-  /* PINCH */
-
-  if(pointers.size===2 && pinch){
-
-    const a=[...pointers.values()];
-
-    const dx=a[0].x-a[1].x;
-    const dy=a[0].y-a[1].y;
-
-    const distance=Math.hypot(dx,dy);
-
-    if(distance>0){
-
-      const factor=pinch.distance/distance;
-
-      const center=(pinch.start+pinch.end)/2;
-
-      start=pinch.start;
-      end=pinch.end;
-
-      zoom(factor,center);
-    }
-
+(function(){
+  const data = window.USD_IRR_DATA || [];
+  if (!data.length) {
+    document.getElementById('info').textContent = 'خطا: data.js بارگذاری نشده است.';
     return;
   }
 
+  const fmt = new Intl.NumberFormat('fa-IR');
+  const faDate = new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'short',day:'numeric'});
+  const chartEl = document.getElementById('chart');
 
-  /* DRAG */
-
-  if(pointers.size===1 && dragState){
-
-    const dx=e.clientX-dragState.x;
-
-    const span=dragState.end-dragState.start;
-
-    const shift=
-      -dx/(W-62)*span;
-
-    start=dragState.start+shift;
-    end=dragState.end+shift;
-
-    clampView();
-
-    draw();
-    drawNavigator();
-  }
-
-});
-
-
-chart.addEventListener("pointerup",e=>{
-
-  const wasOne=pointers.size===1;
-
-  pointers.delete(e.pointerId);
-
-  if(wasOne){
-
-    const moved=
-      dragState &&
-      Math.abs(e.clientX-dragState.x)>8;
-
-    if(!moved){
-
-      showCross(e.clientX,e.clientY);
-    }
-  }
-
-  dragState=null;
-
-  if(pointers.size<2)
-    pinch=null;
-});
-
-
-chart.addEventListener("pointercancel",e=>{
-
-  pointers.delete(e.pointerId);
-
-  dragState=null;
-  pinch=null;
-});
-
-
-/* ---------------------------------------------------------
-   CROSSHAIR
---------------------------------------------------------- */
-
-function showCross(clientX,clientY){
-
-  const rect=chart.getBoundingClientRect();
-
-  const x=clientX-rect.left;
-
-  let ratio=
-    (x-10)/(W-62-10);
-
-  ratio=Math.max(0,Math.min(1,ratio));
-
-  const index=
-    Math.round(
-      start+
-      ratio*(end-start)
-    );
-
-  const p=PTS[
-    Math.max(0,Math.min(PTS.length-1,index))
-  ];
-
-  const px=xOf(index);
-
-  const vals=PTS
-    .slice(
-      Math.max(0,Math.floor(start)),
-      Math.min(PTS.length-1,Math.ceil(end))+1
-    )
-    .map(p=>p.v);
-
-  const lo=Math.pow(
-    10,
-    Math.floor(Math.log10(Math.min(...vals)))
-  );
-
-  const hi=Math.pow(
-    10,
-    Math.ceil(Math.log10(Math.max(...vals)))
-  );
-
-  const py=yOf(p.v,lo,hi);
-
-  cross.innerHTML=
-    dateFmt(p.t)+
-    " · <b>"+
-    fmt(p.v)+
-    " IRR</b>"+
-    (p.src ? " · "+p.src : "");
-
-  cross.style.display="block";
-
-  let left=px+8;
-
-  if(left+250>W)
-    left=px-255;
-
-  cross.style.left=Math.max(4,left)+"px";
-
-  cross.style.top=
-    Math.max(
-      4,
-      Math.min(H-45,py-25)
-    )+"px";
-}
-
-
-/* ---------------------------------------------------------
-   BUTTONS
---------------------------------------------------------- */
-
-document.querySelectorAll("[data-range]").forEach(btn=>{
-
-  btn.addEventListener("click",()=>{
-    setRange(btn.dataset.range);
-    cross.style.display="none";
+  const chart = LightweightCharts.createChart(chartEl,{
+    layout:{background:{type:'solid',color:'#0b0f14'},textColor:'#8c9aaa'},
+    grid:{vertLines:{color:'#151e27'},horzLines:{color:'#151e27'}},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+    rightPriceScale:{
+      borderColor:'#26313c',
+      mode:LightweightCharts.PriceScaleMode.Logarithmic,
+      autoScale:true
+    },
+    timeScale:{
+      borderColor:'#26313c',
+      rightOffset:3,
+      barSpacing:6,
+      minBarSpacing:1,
+      timeVisible:false,
+      secondsVisible:false
+    },
+    handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
+    handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true}
   });
 
-});
+  const series = chart.addLineSeries({
+    color:'#2f8cff',
+    lineWidth:2,
+    priceLineVisible:false,
+    lastValueVisible:true,
+    crosshairMarkerVisible:true,
+    crosshairMarkerRadius:4,
+    autoscaleInfoProvider: original => {
+      const info = original();
+      return info;
+    }
+  });
 
+  series.setData(data);
+  chart.timeScale().fitContent();
 
-document.getElementById("plus").onclick=()=>{
-  zoom(.55);
-};
+  const latest = data[data.length-1];
+  document.getElementById('latest').textContent = fmt.format(Math.round(latest.value)) + ' ریال';
 
+  function showPoint(p){
+    if(!p || p.seriesData === undefined) return;
+    const item = p.seriesData.get(series);
+    if(!item || item.value == null) return;
+    let d;
+    if(typeof item.time === 'string') d = new Date(item.time+'T12:00:00');
+    else if(item.time && item.time.year) d = new Date(item.time.year,item.time.month-1,item.time.day||1,12);
+    if(!d) return;
+    document.getElementById('info').innerHTML =
+      '<b>'+faDate.format(d)+'</b> · '+fmt.format(Math.round(item.value))+' ریال';
+  }
+  chart.subscribeCrosshairMove(showPoint);
 
-document.getElementById("minus").onclick=()=>{
-  zoom(1.8);
-};
+  const buttons = [...document.querySelectorAll('button[data-range]')];
+  function setActive(name){
+    buttons.forEach(b=>b.classList.toggle('active',b.dataset.range===name));
+  }
+  function range(name){
+    if(name==='all'){
+      chart.timeScale().fitContent();
+      setActive(name);
+      return;
+    }
+    const end = data[data.length-1].time;
+    let start;
+    if(name==='5y') start = data.find(x=>x.time >= (new Date(new Date(end).setFullYear(new Date(end).getFullYear()-5))).toISOString().slice(0,10))?.time;
+    if(name==='10y') start = data.find(x=>x.time >= (new Date(new Date(end).setFullYear(new Date(end).getFullYear()-10))).toISOString().slice(0,10))?.time;
+    if(name==='1358-1380') start = data.find(x=>x.time >= '1979-03-21')?.time;
+    let finish = end;
+    if(name==='1358-1380') finish = data.find(x=>x.time >= '2002-03-20')?.time || '2002-03-20';
+    if(start) chart.timeScale().setVisibleRange({from:start,to:finish});
+    setActive(name);
+  }
+  buttons.forEach(b=>b.addEventListener('click',()=>range(b.dataset.range)));
 
+  document.getElementById('plus').addEventListener('click',()=>{
+    const r=chart.timeScale().getVisibleLogicalRange(); if(!r)return;
+    const c=(r.from+r.to)/2, span=(r.to-r.from)*0.7;
+    chart.timeScale().setVisibleLogicalRange({from:c-span/2,to:c+span/2});
+  });
+  document.getElementById('minus').addEventListener('click',()=>{
+    const r=chart.timeScale().getVisibleLogicalRange(); if(!r)return;
+    const c=(r.from+r.to)/2, span=(r.to-r.from)*1.45;
+    chart.timeScale().setVisibleLogicalRange({from:c-span/2,to:c+span/2});
+  });
 
-document.getElementById("reset").onclick=()=>{
-  setRange("ALL");
-  cross.style.display="none";
-};
+  const slider=document.getElementById('slider');
+  slider.addEventListener('input',()=>{
+    const v=Number(slider.value)/1000;
+    const total=data.length;
+    const span=Math.max(40,Math.floor(total*0.22));
+    const end=Math.max(span,Math.floor(v*(total-1)));
+    chart.timeScale().setVisibleLogicalRange({from:Math.max(0,end-span),to:Math.min(total-1,end)});
+  });
 
-
-/* ---------------------------------------------------------
-   NAVIGATOR HANDLES
---------------------------------------------------------- */
-
-let navDrag=null;
-
-function navPosition(e,side){
-
-  const rect=navCanvas.getBoundingClientRect();
-
-  let x=e.clientX-rect.left;
-
-  x=Math.max(0,Math.min(rect.width,x));
-
-  const idx=
-    x/rect.width*(PTS.length-1);
-
-  if(side==="left")
-    start=Math.min(idx,end-8);
-  else
-    end=Math.max(idx,start+8);
-
-  clampView();
-
-  draw();
-  drawNavigator();
-}
-
-
-document.getElementById("leftHandle")
-.addEventListener("pointerdown",e=>{
-  navDrag="left";
-  e.currentTarget.setPointerCapture(e.pointerId);
-});
-
-
-document.getElementById("rightHandle")
-.addEventListener("pointerdown",e=>{
-  navDrag="right";
-  e.currentTarget.setPointerCapture(e.pointerId);
-});
-
-
-document.getElementById("leftHandle")
-.addEventListener("pointermove",e=>{
-  if(navDrag==="left") navPosition(e,"left");
-});
-
-
-document.getElementById("rightHandle")
-.addEventListener("pointermove",e=>{
-  if(navDrag==="right") navPosition(e,"right");
-});
-
-
-document.getElementById("leftHandle")
-.addEventListener("pointerup",()=>{
-  navDrag=null;
-});
-
-
-document.getElementById("rightHandle")
-.addEventListener("pointerup",()=>{
-  navDrag=null;
-});
-
-
-/* ---------------------------------------------------------
-   MOUSE WHEEL
---------------------------------------------------------- */
-
-chart.addEventListener("wheel",e=>{
-
-  e.preventDefault();
-
-  const rect=chart.getBoundingClientRect();
-
-  const x=e.clientX-rect.left;
-
-  const ratio=
-    Math.max(
-      0,
-      Math.min(
-        1,
-        (x-10)/(W-72)
-      )
-    );
-
-  const center=
-    start+
-    ratio*(end-start);
-
-  zoom(
-    e.deltaY>0 ? 1.15 : .87,
-    center
-  );
-
-},{passive:false});
-
-
-/* ---------------------------------------------------------
-   START
---------------------------------------------------------- */
-
-window.addEventListener("resize",resize);
-
-loadData();
-
+  function resize(){
+    chart.applyOptions({width:chartEl.clientWidth,height:chartEl.clientHeight});
+  }
+  new ResizeObserver(resize).observe(chartEl);
+  resize();
+})();
 </script>
-
 </body>
 </html>

@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>USD / IRR — بازار موازی</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="data.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0b0f14;--panel:#111820;--line:#26313c;--text:#e7edf3;--muted:#8c9aaa;--blue:#2f8cff;--green:#22c55e}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Tahoma,Arial,sans-serif;color:var(--text);overflow:hidden}
+body{touch-action:none}
+.wrap{height:100%;display:flex;flex-direction:column;min-height:0}
+.top{padding:12px 14px 8px;border-bottom:1px solid var(--line);background:rgba(11,15,20,.96);backdrop-filter:blur(10px);z-index:5}
+.title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+h1{font-size:19px;margin:0 0 3px;font-weight:700;direction:ltr}
+.sub{font-size:12px;color:var(--muted)}
+.value{font-size:20px;font-weight:700;direction:ltr;white-space:nowrap}
+.controls{display:flex;gap:7px;overflow-x:auto;padding:9px 0 2px;scrollbar-width:none}
+.controls::-webkit-scrollbar{display:none}
+button{border:1px solid #34414e;background:#151d26;color:#cdd7e1;border-radius:9px;padding:8px 11px;font-size:12px;white-space:nowrap}
+button.active{background:#183b64;border-color:#2f8cff;color:#fff}
+.chartbox{position:relative;flex:1;min-height:0}
+#chart{position:absolute;inset:0}
+.info{position:absolute;left:10px;top:10px;z-index:4;background:rgba(17,24,32,.88);border:1px solid #2b3743;border-radius:8px;padding:6px 9px;font-size:11px;pointer-events:none;direction:rtl}
+.info b{font-weight:700}
+.bottom{padding:7px 10px calc(8px + env(safe-area-inset-bottom));background:#0e141b;border-top:1px solid var(--line)}
+.range{width:100%;accent-color:var(--blue);direction:ltr}
+.range-label{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;direction:ltr}
+.note{font-size:10px;color:#718092;text-align:center;margin-top:3px}
+
+.tvbar{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:7px 10px;background:#0d131a;border-bottom:1px solid #26313c;scrollbar-width:none}
+.tvbar::-webkit-scrollbar{display:none}
+.tvbar .group{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.tvbar .sep{width:1px;height:25px;background:#2a3541;margin:0 2px;flex-shrink:0}
+.tvbar button{padding:7px 9px;min-width:34px;font-size:12px}
+.tvbar button.active{background:#183b64;border-color:#2f8cff;color:#fff}
+.toolrow{display:flex;gap:5px;overflow-x:auto;padding:6px 10px;background:#0b1016;border-bottom:1px solid #26313c;scrollbar-width:none}
+.toolrow button{min-width:36px;padding:8px 10px;font-size:14px}
+.toolrow button.active{background:#183b64;border-color:#2f8cff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="title">
+      <div>
+        <h1>USD / IRR</h1>
+        <div class="sub">بازار موازی · مقیاس لگاریتمی</div>
+      </div>
+      <div class="value" id="latest">—</div>
+    </div>
+    <div class="controls">
+      <button data-range="all" class="active">همه</button>
+      <button data-range="5y">۵ سال</button>
+      <button data-range="10y">۱۰ سال</button>
+      <button data-range="1358-1380">۱۳۵۸–۱۳۸۰</button>
+      <button id="plus">＋</button>
+      <button id="minus">－</button>
+    </div>
+  </div>
+  <div class="tvbar">
+    <div class="group">
+      <button data-tf="1M" class="active">۱ماه</button>
+      <button data-tf="3M">۳ماه</button>
+      <button data-tf="1Y">۱سال</button>
+      <button data-tf="5Y">۵سال</button>
+      <button data-tf="ALL">همه</button>
+    </div>
+    <div class="sep"></div>
+    <div class="group">
+      <button id="crosshairBtn" class="active" title="نشانگر متقاطع">✛</button>
+      <button id="resetBtn" title="بازگشت به نمای کامل">⌂</button>
+    </div>
+  </div>
+  <div class="toolrow" aria-label="ابزارهای رسم">
+    <button id="toolPointer" class="active" title="انتخاب">↖</button>
+    <button id="toolHLine" title="خط افقی حمایت/مقاومت">━</button>
+    <button id="toolTrend" title="خط روند">／</button>
+    <button id="toolRect" title="مستطیل همراه خط میانی">▱</button>
+    <button id="toolDelete" title="پاک‌کردن خطوط رسم‌شده">⌫</button>
+    <span style="align-self:center;color:#8c9aaa;font-size:11px;padding:0 4px">ابزار رسم</span>
+  </div>
+  <div class="chartbox">
+    <div id="chart"></div>
+    <canvas id="drawingCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></canvas>
+    <div class="info" id="info">برای دیدن مقدار، روی نمودار بزن</div>
+  </div>
+  <div class="bottom">
+    <input id="slider" class="range" type="range" min="0" max="1000" value="1000">
+    <div class="range-label"><span id="leftLabel">۱۹۷۹</span><span id="rightLabel">۲۰۲۶</span></div>
+    <div class="note">داده‌های تاریخی: ماهانه ۱۹۷۹–۲۰۰۳، سالانه ۲۰۰۴–۲۰۱۰، روزانه ۲۰۱۱–۲۰۲۶</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const data = window.USD_IRR_DATA || [];
+  if (!data.length) {
+    document.getElementById('info').textContent = 'خطا: data.js بارگذاری نشده است.';
+    return;
+  }
+
+  const fmt = new Intl.NumberFormat('fa-IR');
+  const faDate = new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'short',day:'numeric'});
+  const chartEl = document.getElementById('chart');
+
+  const chart = LightweightCharts.createChart(chartEl,{
+    layout:{background:{type:'solid',color:'#0b0f14'},textColor:'#8c9aaa'},
+    grid:{vertLines:{color:'#151e27'},horzLines:{color:'#151e27'}},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+    rightPriceScale:{
+      borderColor:'#26313c',
+      mode:LightweightCharts.PriceScaleMode.Logarithmic,
+      autoScale:true
+    },
+    timeScale:{
+      borderColor:'#26313c',
+      rightOffset:3,
+      barSpacing:6,
+      minBarSpacing:1,
+      timeVisible:false,
+      secondsVisible:false
+    },
+    handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
+    handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true}
+  });
+
+  const series = chart.addLineSeries({
+    color:'#2f8cff',
+    lineWidth:2,
+    priceLineVisible:false,
+    lastValueVisible:true,
+    crosshairMarkerVisible:true,
+    crosshairMarkerRadius:4,
+    autoscaleInfoProvider: original => {
+      const info = original();
+      return info;
+    }
+  });
+
+  series.setData(data);
+  chart.timeScale().fitContent();
+
+  const latest = data[data.length-1];
+  document.getElementById('latest').textContent = fmt.format(Math.round(latest.value)) + ' ریال';
+
+  function showPoint(p){
+    if(!p || p.seriesData === undefined) return;
+    const item = p.seriesData.get(series);
+    if(!item || item.value == null) return;
+    let d;
+    if(typeof item.time === 'string') d = new Date(item.time+'T12:00:00');
+    else if(item.time && item.time.year) d = new Date(item.time.year,item.time.month-1,item.time.day||1,12);
+    if(!d) return;
+    document.getElementById('info').innerHTML =
+      '<b>'+faDate.format(d)+'</b><br>قیمت نقطه انتخاب‌شده: '+fmt.format(Math.round(item.value))+' ریال';
+  }
+  chart.subscribeCrosshairMove(showPoint);
+
+  const buttons = [...document.querySelectorAll('button[data-range]')];
+  let applyingPreset = false;
+  function setActive(name){
+    buttons.forEach(b=>b.classList.toggle('active', !!name && b.dataset.range===name));
+  }
+  function dateOnly(s){ return new Date(s+'T12:00:00Z'); }
+  function range(name){
+    applyingPreset = true;
+    if(name==='all'){
+      chart.timeScale().fitContent();
+      setActive(name);
+      applyingPreset = false;
+      return;
+    }
+    const lastDate = data[data.length-1].time;
+    const last = dateOnly(lastDate);
+    let startDate, finishDate = lastDate;
+    if(name==='5y'){
+      const d = new Date(last); d.setUTCFullYear(d.getUTCFullYear()-5);
+      startDate = d.toISOString().slice(0,10);
+    } else if(name==='10y'){
+      const d = new Date(last); d.setUTCFullYear(d.getUTCFullYear()-10);
+      startDate = d.toISOString().slice(0,10);
+    } else if(name==='1358-1380'){
+      startDate = '1979-03-21';
+      finishDate = '2002-03-20';
+    }
+    const start = data.find(x=>x.time >= startDate)?.time;
+    const finish = data.find(x=>x.time >= finishDate)?.time || finishDate;
+    if(start) chart.timeScale().setVisibleRange({from:start,to:finish});
+    setActive(name);
+    applyingPreset = false;
+  }
+  buttons.forEach(b=>b.addEventListener('click',()=>range(b.dataset.range)));
+
+  chart.timeScale().subscribeVisibleTimeRangeChange((visible)=>{
+    if(!visible || applyingPreset) return;
+    const from = typeof visible.from === 'string' ? visible.from : '';
+    const to = typeof visible.to === 'string' ? visible.to : '';
+    if(!from || !to) { setActive(null); return; }
+    const near = (a,b,days) => Math.abs((dateOnly(a)-dateOnly(b))/86400000) <= days;
+    const first = data[0].time, last = data[data.length-1].time;
+    if(near(from,first,40) && near(to,last,40)) setActive('all');
+    else if(near(from,'1979-03-21',60) && near(to,'2002-03-20',60)) setActive('1358-1380');
+    else {
+      const end = dateOnly(to);
+      const five = new Date(end); five.setUTCFullYear(five.getUTCFullYear()-5);
+      const ten = new Date(end); ten.setUTCFullYear(ten.getUTCFullYear()-10);
+      if(near(from,five.toISOString().slice(0,10),90) && near(to,last,90)) setActive('5y');
+      else if(near(from,ten.toISOString().slice(0,10),120) && near(to,last,90)) setActive('10y');
+      else setActive(null);
+    }
+  });
+
+  document.getElementById('plus').addEventListener('click',()=>{
+    const r=chart.timeScale().getVisibleLogicalRange(); if(!r)return;
+    const c=(r.from+r.to)/2, span=(r.to-r.from)*0.7;
+    chart.timeScale().setVisibleLogicalRange({from:c-span/2,to:c+span/2});
+  });
+  document.getElementById('minus').addEventListener('click',()=>{
+    const r=chart.timeScale().getVisibleLogicalRange(); if(!r)return;
+    const c=(r.from+r.to)/2, span=(r.to-r.from)*1.45;
+    chart.timeScale().setVisibleLogicalRange({from:c-span/2,to:c+span/2});
+  });
+
+  const slider=document.getElementById('slider');
+  slider.addEventListener('input',()=>{
+    const v=Number(slider.value)/1000;
+    const total=data.length;
+    const span=Math.max(40,Math.floor(total*0.22));
+    const end=Math.max(span,Math.floor(v*(total-1)));
+    chart.timeScale().setVisibleLogicalRange({from:Math.max(0,end-span),to:Math.min(total-1,end)});
+  });
+
+
+  // TradingView-inspired tools: timeframe shortcuts, horizontal levels and trend lines.
+  let activeTool = 'pointer';
+  let trendStart = null;
+  const drawings = [];
+  const toolButtons = {
+    pointer: document.getElementById('toolPointer'),
+    hline: document.getElementById('toolHLine'),
+    trend: document.getElementById('toolTrend'),
+    rect: document.getElementById('toolRect')
+  };
+  const rectDrawings = [];
+  const drawingCanvas = document.getElementById('drawingCanvas');
+  const drawingCtx = drawingCanvas.getContext('2d');
+  function redrawRectangles(){
+    const w=chartEl.clientWidth, h=chartEl.clientHeight, dpr=window.devicePixelRatio||1;
+    drawingCanvas.width=Math.max(1,Math.round(w*dpr));
+    drawingCanvas.height=Math.max(1,Math.round(h*dpr));
+    drawingCtx.setTransform(dpr,0,0,dpr,0,0);
+    drawingCtx.clearRect(0,0,w,h);
+    drawingCtx.lineWidth=1.5;
+    drawingCtx.strokeStyle='#f5b942';
+    drawingCtx.fillStyle='rgba(245,185,66,0.08)';
+    rectDrawings.forEach(r=>{
+      const x1=chart.timeScale().timeToCoordinate(r.t1);
+      const x2=chart.timeScale().timeToCoordinate(r.t2);
+      const y1=series.priceToCoordinate(r.p1);
+      const y2=series.priceToCoordinate(r.p2);
+      if(x1==null||x2==null||y1==null||y2==null)return;
+      const left=Math.min(x1,x2), right=Math.max(x1,x2);
+      const top=Math.min(y1,y2), bottom=Math.max(y1,y2), mid=(top+bottom)/2;
+      drawingCtx.fillRect(left,top,right-left,bottom-top);
+      drawingCtx.strokeRect(left,top,right-left,bottom-top);
+      drawingCtx.setLineDash([5,4]);
+      drawingCtx.beginPath(); drawingCtx.moveTo(left,mid); drawingCtx.lineTo(right,mid); drawingCtx.stroke();
+      drawingCtx.setLineDash([]);
+    });
+  }
+  function chooseTool(tool){
+    activeTool = tool;
+    trendStart = null;
+    Object.entries(toolButtons).forEach(([k,b])=>b.classList.toggle('active',k===tool));
+    chart.applyOptions({handleScroll:tool==='pointer',handleScale:tool==='pointer'});
+    document.getElementById('info').textContent =
+      tool==='hline' ? 'برای افزودن خط حمایت/مقاومت، روی قیمت موردنظر بزن' :
+      tool==='trend' ? 'برای خط روند، دو نقطه روی نمودار انتخاب کن' :
+      tool==='rect' ? 'برای مستطیل، دو گوشه را انتخاب کن؛ خط میانی خودکار رسم می‌شود' :
+      'برای دیدن مقدار، روی نمودار بزن';
+  }
+  toolButtons.pointer.addEventListener('click',()=>chooseTool('pointer'));
+  toolButtons.hline.addEventListener('click',()=>chooseTool('hline'));
+  toolButtons.trend.addEventListener('click',()=>chooseTool('trend'));
+  toolButtons.rect.addEventListener('click',()=>chooseTool('rect'));
+  document.getElementById('toolDelete').addEventListener('click',()=>{
+    drawings.forEach(d=>{ try { d.series ? chart.removeSeries(d.series) : series.removePriceLine(d.line); } catch(e){} });
+    drawings.length=0;
+    rectDrawings.length=0;
+    redrawRectangles();
+    chooseTool('pointer');
+  });
+
+  document.getElementById('crosshairBtn').addEventListener('click',e=>{
+    const b=e.currentTarget, enabled=!b.classList.contains('active');
+    b.classList.toggle('active',enabled);
+    chart.applyOptions({crosshair:{mode:enabled?LightweightCharts.CrosshairMode.Normal:LightweightCharts.CrosshairMode.Hidden}});
+  });
+  document.getElementById('resetBtn').addEventListener('click',()=>{
+    chart.timeScale().fitContent(); chooseTool('pointer');
+  });
+
+  document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-tf]').forEach(b=>b.classList.toggle('active',b===btn));
+    const tf=btn.dataset.tf, end=data[data.length-1].time;
+    if(tf==='ALL'){chart.timeScale().fitContent();return;}
+    const ed=new Date(end+'T12:00:00Z'), start=new Date(ed);
+    if(tf==='1M') start.setUTCDate(start.getUTCDate()-30);
+    if(tf==='3M') start.setUTCDate(start.getUTCDate()-90);
+    if(tf==='1Y') start.setUTCFullYear(start.getUTCFullYear()-1);
+    if(tf==='5Y') start.setUTCFullYear(start.getUTCFullYear()-5);
+    const from=start.toISOString().slice(0,10);
+    const first=data.find(x=>x.time>=from)?.time || data[0].time;
+    chart.timeScale().setVisibleRange({from:first,to:end});
+  }));
+
+  chart.subscribeClick(param=>{
+    if(activeTool==='pointer' || !param || !param.point) return;
+    const price=series.coordinateToPrice(param.point.y);
+    const time=param.time;
+    if(price==null || !time) return;
+    if(activeTool==='hline'){
+      const line=series.createPriceLine({price,color:'#f5b942',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'S/R'});
+      drawings.push({line});
+      document.getElementById('info').textContent='خط افقی اضافه شد · برای رسم بعدی دوباره روی نمودار بزن';
+      return;
+    }
+    if(activeTool==='rect'){
+      if(!trendStart){
+        trendStart={time,price};
+        document.getElementById('info').textContent='گوشه اول ثبت شد؛ گوشه مقابل مستطیل را انتخاب کن';
+      } else {
+        rectDrawings.push({t1:trendStart.time,p1:trendStart.price,t2:time,p2:price});
+        trendStart=null;
+        redrawRectangles();
+        document.getElementById('info').textContent='مستطیل با خط میانی رسم شد';
+      }
+      return;
+    }
+    if(activeTool==='trend'){
+      if(!trendStart){
+        trendStart={time,price};
+        document.getElementById('info').textContent='نقطه اول ثبت شد؛ نقطه دوم خط روند را انتخاب کن';
+      } else {
+        const a=trendStart, b={time,price};
+        if(String(a.time)===String(b.time)){trendStart=null;return;}
+        const pts=[a,b].sort((x,y)=>String(x.time).localeCompare(String(y.time)));
+        const drawn=chart.addLineSeries({color:'#f5b942',lineWidth:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:true});
+        drawn.setData(pts);
+        drawings.push({series:drawn});
+        trendStart=null;
+        document.getElementById('info').textContent='خط روند رسم شد';
+      }
+    }
+  });
+
+  function resize(){
+    chart.applyOptions({width:chartEl.clientWidth,height:chartEl.clientHeight});
+  }
+  new ResizeObserver(()=>{resize();redrawRectangles();}).observe(chartEl);
+  chart.timeScale().subscribeVisibleTimeRangeChange(()=>redrawRectangles());
+  chart.timeScale().subscribeVisibleLogicalRangeChange(()=>redrawRectangles());
+  resize();
+  redrawRectangles();
+})();
+</script>
+</body>
+</html>
